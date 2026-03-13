@@ -43,7 +43,7 @@ export default function AdminPanel({ token, onLogout }: AdminPanelProps) {
       const projId = (db as any)._databaseId?.projectId || 'unknown';
       setDbInfo(`Proyecto: ${projId} | DB: ${dbId}`);
 
-      // Fetch orders
+      // Fetch orders from both possible collections
       const ordersSnap = await getDocs(collection(db, 'orders'));
       const pedidosSnap = await getDocs(collection(db, 'pedidos'));
       
@@ -52,15 +52,13 @@ export default function AdminPanel({ token, onLogout }: AdminPanelProps) {
         pedidos: pedidosSnap.size
       });
 
-      let querySnapshot = ordersSnap;
-      if (ordersSnap.empty && !pedidosSnap.empty) {
-        querySnapshot = pedidosSnap;
-      }
+      // Combine all documents
+      const allDocs = [...ordersSnap.docs, ...pedidosSnap.docs];
       
-      const ordersData = querySnapshot.docs.map(doc => {
+      const ordersData = allDocs.map(doc => {
         const data = doc.data();
-        // Skip settings document if it's in the orders collection
-        if (doc.id === 'settings_access' || data.isSettings) return null;
+        // Skip settings documents
+        if (doc.id === 'settings_access' || data.isSettings || data.type === 'settings') return null;
         
         let createdAt = new Date().toISOString();
         if (data.createdAt?.toDate) {
