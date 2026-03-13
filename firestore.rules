@@ -11,90 +11,63 @@ service cloud.firestore {
 
     function isAdmin() {
       return isAuthenticated() && (
-        // 1. SUPER ADMIN: Siempre tiene acceso garantizado
         request.auth.token.email == "hmalldm95@gmail.com" ||
-        
-        // 2. ADMINS POR UID
         (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin') ||
-         
-        // 3. ADMINS POR CORREO
-        (exists(/databases/$(database)/documents/users/$(request.auth.token.email)) &&
-         get(/databases/$(database)/documents/users/$(request.auth.token.email)).data.role == 'admin')
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin')
       );
     }
 
-    // NUEVA: Verifica si es un ayudante con sesión activa por PIN
     function isStaff() {
       return isAuthenticated() && 
-             exists(/databases/$(database)/documents/staff_sessions/$(request.auth.uid)) &&
-             get(/databases/$(database)/documents/staff_sessions/$(request.auth.uid)).data.expires > request.time;
+             exists(/databases/$(database)/documents/staff_sessions/$(request.auth.uid));
     }
 
-    function hasOnlyAllowedFields(fields) {
-      return request.resource.data.keys().hasOnly(fields);
-    }
-
-    function hasRequiredFields(fields) {
-      return request.resource.data.keys().hasAll(fields);
+    function canManageOrders() {
+      return isAdmin() || isStaff();
     }
 
     // ===============================================================
     // Rules
     // ===============================================================
 
-    match /colecciones/{coleccionId} {
-      allow read: if true;
-      allow create, update: if isAdmin();
-      allow delete: if isAdmin();
-    }
+    // Publicly readable catalogs
+    match /colecciones/{id} { allow read: if true; allow write: if isAdmin(); }
+    match /categorias/{id} { allow read: if true; allow write: if isAdmin(); }
+    match /productos/{id} { allow read: if true; allow write: if isAdmin(); }
+    match /settings/{id} { allow read: if true; allow write: if isAdmin(); }
 
-    match /categorias/{categoriaId} {
+    // Access settings (PIN)
+    match /settings_access/staff {
       allow read: if true;
-      allow create, update: if isAdmin();
-      allow delete: if isAdmin();
-    }
-
-    match /productos/{productoId} {
-      allow read: if true;
-      allow create, update: if isAdmin();
-      allow delete: if isAdmin();
-    }
-
-    // --- CONFIGURACIÓN DE ACCESO (PIN) ---
-    match /orders/settings_access {
-      allow read: if true; // Necesario para verificar el PIN al entrar
       allow write: if isAdmin();
     }
 
-    // --- SESIONES DE AYUDANTES ---
+    // Staff sessions
     match /staff_sessions/{sessionId} {
       allow read, write: if isAuthenticated() && request.auth.uid == sessionId;
     }
 
-    // --- PEDIDOS (UNIFICADOS) ---
+    // Orders
     match /orders/{orderId} {
-      allow create: if true; 
-      allow read, update: if isAdmin() || isStaff();
+      allow create: if true;
+      allow read, update: if canManageOrders();
       allow delete: if isAdmin();
     }
 
     match /pedidos/{pedidoId} {
       allow create: if true;
-      allow read, update: if isAdmin() || isStaff();
+      allow read, update: if canManageOrders();
       allow delete: if isAdmin();
     }
 
-    match /settings/{settingId} {
-      allow read: if true;
-      allow create, update: if isAdmin();
-      allow delete: if isAdmin();
-    }
-
+    // Users
     match /users/{userId} {
-      allow read: if isAdmin();
-      allow create, update: if isAdmin();
-      allow delete: if isAdmin();
+      allow read, write: if isAdmin();
+    }
+
+    // Default deny
+    match /{document=**} {
+      allow read, write: if isAdmin();
     }
   }
 }

@@ -188,7 +188,9 @@ export default function AdminPanel({ token, onLogout }: AdminPanelProps) {
     if (!editingId || !editForm) return;
     setIsUpdating(true);
     try {
-      const orderRef = doc(db, 'orders', editingId);
+      const order = orders.find(o => o.id === editingId);
+      const collectionName = (order as any)?.collection || 'orders';
+      const orderRef = doc(db, collectionName, editingId);
       
       // Update with both old and new field names for compatibility
       const updateData: any = {
@@ -222,7 +224,9 @@ export default function AdminPanel({ token, onLogout }: AdminPanelProps) {
   const handleDeleteOrder = async (orderId: string) => {
     setIsDeleting(true);
     try {
-      await deleteDoc(doc(db, 'orders', orderId));
+      const order = orders.find(o => o.id === orderId);
+      const collectionName = (order as any)?.collection || 'orders';
+      await deleteDoc(doc(db, collectionName, orderId));
       await fetchData();
       setDeletingId(null);
     } catch (error) {
@@ -428,150 +432,156 @@ export default function AdminPanel({ token, onLogout }: AdminPanelProps) {
               </div>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
+            <div className="overflow-x-auto scrollbar-hide">
+              <table className="w-full text-left border-collapse min-w-[700px]">
               <thead>
                 <tr className="bg-gray-50 dark:bg-gray-800/50 border-b border-gray-100 dark:border-gray-700">
-                  <th className="py-4 px-6 font-medium text-gray-500 dark:text-gray-400">ID</th>
-                  <th className="py-4 px-6 font-medium text-gray-500 dark:text-gray-400">Origen</th>
-                  <th className="py-4 px-6 font-medium text-gray-500 dark:text-gray-400">Cliente</th>
-                  <th className="py-4 px-6 font-medium text-gray-500 dark:text-gray-400">Iglesia/Tel</th>
-                  <th className="py-4 px-6 font-medium text-gray-500 dark:text-gray-400">Artículos</th>
-                  <th className="py-4 px-6 font-medium text-gray-500 dark:text-gray-400 text-right">Total</th>
-                  <th className="py-4 px-6 font-medium text-gray-500 dark:text-gray-400 text-center">Estado</th>
-                  <th className="py-4 px-6 font-medium text-gray-500 dark:text-gray-400 text-right">Fecha</th>
-                  <th className="py-4 px-6 font-medium text-gray-500 dark:text-gray-400 text-center">Acción</th>
+                  <th className="py-2 px-3 font-medium text-gray-500 dark:text-gray-400 text-[10px] uppercase">ID/Origen</th>
+                  <th className="py-2 px-3 font-medium text-gray-500 dark:text-gray-400 text-[10px] uppercase">Cliente</th>
+                  <th className="py-2 px-3 font-medium text-gray-500 dark:text-gray-400 text-[10px] uppercase">Iglesia/Tel</th>
+                  <th className="py-2 px-3 font-medium text-gray-500 dark:text-gray-400 text-[10px] uppercase">Artículos</th>
+                  <th className="py-2 px-3 font-medium text-gray-500 dark:text-gray-400 text-[10px] uppercase text-right">Total</th>
+                  <th className="py-2 px-3 font-medium text-gray-500 dark:text-gray-400 text-[10px] uppercase text-center">Estado</th>
+                  <th className="py-2 px-3 font-medium text-gray-500 dark:text-gray-400 text-[10px] uppercase text-right">Fecha</th>
+                  <th className="py-2 px-3 font-medium text-gray-500 dark:text-gray-400 text-[10px] uppercase text-center">Acción</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50 dark:divide-gray-700/50">
                 {orders.map((order) => (
                   <tr key={order.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
-                    <td className="py-4 px-6 text-gray-500 dark:text-gray-400">
-                      <span className="text-xs font-mono bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded">{String(order.id).slice(0, 6)}</span>
+                    <td className="py-2 px-3">
+                      <div className="flex flex-col gap-0.5">
+                        <span className="text-[9px] font-mono bg-gray-100 dark:bg-gray-700 px-1 py-0.5 rounded w-fit text-gray-500 dark:text-gray-400">{String(order.id).slice(0, 6)}</span>
+                        <span className={`text-[8px] uppercase font-bold px-1 py-0.5 rounded w-fit ${
+                          (order as any).collection === 'orders' 
+                            ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' 
+                            : 'bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400'
+                        }`}>
+                          {(order as any).collection}
+                        </span>
+                      </div>
                     </td>
-                    <td className="py-4 px-6 text-gray-500 dark:text-gray-400">
-                      <span className={`text-[10px] uppercase font-bold px-1.5 py-0.5 rounded ${
-                        (order as any).collection === 'orders' 
-                          ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' 
-                          : 'bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400'
-                      }`}>
-                        {(order as any).collection}
-                      </span>
-                    </td>
-                    <td className="py-4 px-6">
+                    <td className="py-2 px-3">
                       {editingId === order.id ? (
                         <input
                           type="text"
                           value={editForm.customer_name}
                           onChange={(e) => setEditForm({ ...editForm, customer_name: e.target.value })}
-                          className="w-full px-2 py-1 text-sm border border-indigo-300 rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                          className="w-full px-1.5 py-0.5 text-xs border border-indigo-300 rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                         />
                       ) : (
-                        <span className="font-medium text-gray-900 dark:text-gray-100">{order.customer_name}</span>
+                        <span className="font-medium text-gray-900 dark:text-gray-100 text-xs">{order.customer_name}</span>
                       )}
                     </td>
-                    <td className="py-4 px-6">
+                    <td className="py-2 px-3">
                       {editingId === order.id ? (
                         <input
                           type="text"
                           value={editForm.church}
                           onChange={(e) => setEditForm({ ...editForm, church: e.target.value })}
-                          className="w-full px-2 py-1 text-sm border border-indigo-300 rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                          className="w-full px-1.5 py-0.5 text-xs border border-indigo-300 rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                         />
                       ) : (
-                        <span className="text-gray-600 dark:text-gray-300">{order.church}</span>
+                        <span className="text-gray-600 dark:text-gray-300 text-[10px]">{order.church}</span>
                       )}
                     </td>
-                    <td className="py-4 px-6 text-sm text-gray-500 dark:text-gray-400">
+                    <td className="py-2 px-3 text-[10px] text-gray-500 dark:text-gray-400 max-w-[150px]">
                       {order.items?.map((item: any, i: number) => (
-                        <div key={i} className="mb-1">
+                        <div key={i} className="truncate" title={`${item.quantity || item.qty || 1}x ${item.product_type || item.product || item.name}`}>
                           <span className="font-medium text-gray-700 dark:text-gray-300">{item.quantity || item.qty || 1}x</span> {item.product_type || item.product || item.name} 
-                          <br/>
-                          <span className="text-xs opacity-75">
-                            {item.design || item.option} {item.design_code ? `[${item.design_code}]` : ''} {item.size || item.talla ? `(${item.size || item.talla})` : ''}
-                          </span>
                         </div>
                       ))}
                     </td>
-                    <td className="py-4 px-6 text-right">
+                    <td className="py-2 px-3 text-right">
                       {editingId === order.id ? (
                         <input
                           type="number"
                           value={editForm.total_amount}
                           onChange={(e) => setEditForm({ ...editForm, total_amount: e.target.value })}
-                          className="w-24 px-2 py-1 text-sm border border-indigo-300 rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white text-right"
+                          className="w-16 px-1.5 py-0.5 text-xs border border-indigo-300 rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white text-right"
                         />
                       ) : (
-                        <span className="font-semibold text-gray-900 dark:text-gray-100">C$ {order.total_amount}</span>
+                        <span className="font-semibold text-gray-900 dark:text-gray-100 text-xs">C${order.total_amount}</span>
                       )}
                     </td>
-                    <td className="py-4 px-6 text-center">
+                    <td className="py-2 px-3 text-center">
                       {editingId === order.id ? (
                         <select
                           value={editForm.status}
                           onChange={(e) => setEditForm({ ...editForm, status: e.target.value })}
-                          className="px-2 py-1 text-xs border border-indigo-300 rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                          className="px-1 py-0.5 text-[9px] border border-indigo-300 rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                         >
                           <option value="pendiente">Pendiente</option>
                           <option value="completado">Completado</option>
                           <option value="cancelado">Cancelado</option>
                         </select>
                       ) : (
-                        <span className={`px-3 py-1 rounded-full text-xs font-medium border ${
+                        <span className={`px-1.5 py-0.5 rounded-full text-[9px] font-medium border ${
                           order.status.toLowerCase() === 'completado' 
                             ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-800 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800/50'
                             : order.status.toLowerCase() === 'cancelado'
-                            ? 'bg-red-100 dark:bg-red-900/20 text-red-800 dark:text-red-400 border-red-200 dark:border-red-800/50'
-                            : 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-400 border-yellow-200 dark:border-yellow-800/50'
+                            ? 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-400 border-red-200 dark:border-red-800/50'
+                            : 'bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-400 border-amber-200 dark:border-amber-800/50'
                         }`}>
                           {order.status}
                         </span>
                       )}
                     </td>
-                    <td className="py-4 px-6 text-gray-500 dark:text-gray-400 text-right text-sm">
+                    <td className="py-2 px-3 text-right text-[9px] text-gray-500 dark:text-gray-400">
                       {new Date(order.created_at!).toLocaleDateString()}
                     </td>
-                    <td className="py-4 px-6 text-center">
-                      <div className="flex items-center justify-center gap-2">
+                    <td className="py-2 px-3 text-center">
+                      <div className="flex items-center justify-center gap-1">
                         {editingId === order.id ? (
                           <>
                             <button
                               onClick={handleUpdateOrder}
                               disabled={isUpdating}
-                              className="p-1.5 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 rounded-lg transition-colors"
+                              className="p-1 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 rounded transition-colors"
                               title="Guardar"
                             >
-                              {isUpdating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                              {isUpdating ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
                             </button>
                             <button
                               onClick={() => setEditingId(null)}
-                              className="p-1.5 text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                              className="p-1 text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
                               title="Cancelar"
                             >
-                              <X className="w-4 h-4" />
+                              <X className="w-3 h-3" />
                             </button>
                           </>
                         ) : (
                           <>
                             <button
                               onClick={() => handleStartEdit(order)}
-                              className="p-1.5 text-indigo-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg transition-colors"
+                              className="p-1 text-indigo-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded transition-colors"
                               title="Editar"
                             >
-                              <Edit2 className="w-4 h-4" />
+                              <Edit2 className="w-3 h-3" />
                             </button>
                             {deletingId === order.id ? (
-                              <div className="flex gap-1">
-                                <button onClick={() => handleDeleteOrder(order.id!)} className="text-red-600 text-xs font-bold">SI</button>
-                                <button onClick={() => setDeletingId(null)} className="text-gray-400 text-xs">NO</button>
+                              <div className="flex items-center gap-1 bg-red-50 dark:bg-red-900/20 p-0.5 rounded border border-red-100 dark:border-red-800/30">
+                                <button
+                                  onClick={() => handleDeleteOrder(order.id!)}
+                                  disabled={isDeleting}
+                                  className="text-[9px] font-bold text-red-600 dark:text-red-400 px-1 hover:underline"
+                                >
+                                  {isDeleting ? '...' : 'SÍ'}
+                                </button>
+                                <button
+                                  onClick={() => setDeletingId(null)}
+                                  className="text-[9px] font-bold text-gray-400 px-1 hover:underline"
+                                >
+                                  NO
+                                </button>
                               </div>
                             ) : (
-                              <button 
+                              <button
                                 onClick={() => setDeletingId(order.id!)}
-                                className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
-                                title="Borrar"
+                                className="p-1 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors"
+                                title="Eliminar"
                               >
-                                <Trash2 className="w-4 h-4" />
+                                <Trash2 className="w-3 h-3" />
                               </button>
                             )}
                           </>
