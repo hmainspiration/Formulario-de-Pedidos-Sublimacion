@@ -132,6 +132,7 @@ export default function AdminPanel({ token, onLogout }: AdminPanelProps) {
   const handleSaveSettings = async () => {
     if (!isOwner) return;
     setIsSavingSettings(true);
+    const path = 'settings/access';
     try {
       await setDoc(doc(db, 'settings', 'access'), {
         staffPin: staffPin,
@@ -139,9 +140,24 @@ export default function AdminPanel({ token, onLogout }: AdminPanelProps) {
         updatedBy: auth.currentUser?.email
       }, { merge: true });
       alert('Configuración guardada correctamente.');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error saving settings:', error);
-      alert('Error al guardar la configuración.');
+      
+      // Estructura de error detallada para diagnóstico
+      const errInfo = {
+        error: error.message,
+        operationType: 'write',
+        path: path,
+        authInfo: {
+          userId: auth.currentUser?.uid,
+          email: auth.currentUser?.email,
+          emailVerified: auth.currentUser?.emailVerified,
+          isAnonymous: auth.currentUser?.isAnonymous
+        }
+      };
+      console.error('Firestore Error Detail:', JSON.stringify(errInfo));
+      
+      alert(`Error al guardar la configuración: ${error.message || 'Permisos insuficientes'}`);
     } finally {
       setIsSavingSettings(false);
     }

@@ -11,10 +11,14 @@ service cloud.firestore {
 
     function isAdmin() {
       return isAuthenticated() && (
-        request.auth.token.email == "hmalldm95@gmail.com" ||
+        (request.auth.token.email == "hmalldm95@gmail.com" && request.auth.token.email_verified == true) ||
         (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin')
       );
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
     }
 
     // Verifica si es un ayudante con sesión activa
@@ -53,10 +57,13 @@ service cloud.firestore {
       allow read, write: if isAdmin() || isStaff();
     }
 
+    match /settings/access {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
     match /settings/{settingId} {
-      // Permitimos leer el PIN de acceso (solo el campo staffPin si es posible, o todo el doc)
-      // Para mayor seguridad, el PIN debería estar en un doc separado
-      allow read: if true; 
+      allow read: if isAdmin();
       allow write: if isAdmin();
     }
 
@@ -70,10 +77,6 @@ service cloud.firestore {
     match /users/{userId} {
       allow read: if isAdmin() || isOwner(userId);
       allow write: if isAdmin();
-    }
-
-    function isOwner(userId) {
-      return isAuthenticated() && request.auth.uid == userId;
     }
   }
 }
