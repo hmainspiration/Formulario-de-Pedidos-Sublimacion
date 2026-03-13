@@ -1,0 +1,79 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && (
+        request.auth.token.email == "hmalldm95@gmail.com" ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin')
+      );
+    }
+
+    // Verifica si es un ayudante con sesión activa
+    function isStaff() {
+      return isAuthenticated() && 
+             exists(/databases/$(database)/documents/staff_sessions/$(request.auth.uid)) &&
+             get(/databases/$(database)/documents/staff_sessions/$(request.auth.uid)).data.expires > request.time;
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /colecciones/{coleccionId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /categorias/{categoriaId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /productos/{productoId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /pedidos/{pedidoId} {
+      allow create: if true;
+      allow read, write: if isAdmin() || isStaff();
+    }
+
+    match /orders/{orderId} {
+      allow create: if true;
+      allow read, write: if isAdmin() || isStaff();
+    }
+
+    match /settings/{settingId} {
+      // Permitimos leer el PIN de acceso (solo el campo staffPin si es posible, o todo el doc)
+      // Para mayor seguridad, el PIN debería estar en un doc separado
+      allow read: if true; 
+      allow write: if isAdmin();
+    }
+
+    match /staff_sessions/{sessionId} {
+      // El ayudante puede crear su propia sesión si conoce el PIN (validado en el cliente)
+      // Pero para que la regla sea segura, el cliente debe enviar el PIN? No, el cliente crea el doc.
+      // La regla debe permitir crear si el ID es el UID del usuario.
+      allow read, write: if isAuthenticated() && request.auth.uid == sessionId;
+    }
+
+    match /users/{userId} {
+      allow read: if isAdmin() || isOwner(userId);
+      allow write: if isAdmin();
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+  }
+}

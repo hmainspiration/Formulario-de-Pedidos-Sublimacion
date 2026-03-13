@@ -1,0 +1,50 @@
+{
+  "entities": {
+    "Order": {
+      "title": "Order",
+      "description": "A customer order",
+      "type": "object",
+      "properties": {
+        "customer_name": { "type": "string" },
+        "church": { "type": "string" },
+        "total_amount": { "type": "number" },
+        "status": { "type": "string", "enum": ["pendiente", "completado", "cancelado"] },
+        "items": { "type": "array" },
+        "created_at": { "type": "string", "format": "date-time" }
+      },
+      "required": ["customer_name", "total_amount", "status"]
+    },
+    "StaffSession": {
+      "title": "Staff Session",
+      "description": "A temporary session for an assistant",
+      "type": "object",
+      "properties": {
+        "expires": { "type": "string", "format": "date-time" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "type": { "type": "string" }
+      }
+    },
+    "AccessSettings": {
+      "title": "Access Settings",
+      "description": "Global access configuration",
+      "type": "object",
+      "properties": {
+        "staffPin": { "type": "string" }
+      }
+    }
+  },
+  "firestore": {
+    "/orders/{orderId}": {
+      "schema": "Order",
+      "description": "Collection of customer orders"
+    },
+    "/staff_sessions/{sessionId}": {
+      "schema": "StaffSession",
+      "description": "Active assistant sessions"
+    },
+    "/settings/access": {
+      "schema": "AccessSettings",
+      "description": "PIN configuration for assistants"
+    }
+  }
+}

@@ -15,6 +15,7 @@ export interface Order {
   church: string;
   total_amount: number;
   items: OrderItem[];
+  status: string;
   created_at?: string;
 }
 
