@@ -130,4 +130,3 @@ export default function App() {
     </div>
   );
 }
-// En la app vieja era teléfono, lo guardamos para compatibilidad

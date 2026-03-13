@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { Order } from '../types';
-import { LogOut, RefreshCw, Download, FileText, BarChart3, Package, Trash2, Loader2 } from 'lucide-react';
+import { LogOut, RefreshCw, Download, FileText, BarChart3, Package, Trash2, Loader2, AlertCircle } from 'lucide-react';
 import { db, auth } from '../lib/firebase';
-import { collection, getDocs, query, orderBy, deleteDoc, doc } from 'firebase/firestore';
+import { collection, getDocs, deleteDoc, doc } from 'firebase/firestore';
 import { signOut } from 'firebase/auth';
 
 interface AdminPanelProps {
@@ -14,6 +14,7 @@ export default function AdminPanel({ token, onLogout }: AdminPanelProps) {
   const [orders, setOrders] = useState<Order[]>([]);
   const [reports, setReports] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'orders' | 'summary'>('orders');
   
   // Delete state
@@ -22,16 +23,21 @@ export default function AdminPanel({ token, onLogout }: AdminPanelProps) {
 
   const fetchData = async () => {
     setLoading(true);
+    setErrorMsg(null);
     try {
-      // Fetch from 'orders' collection to unify with the old app
-      const q = query(collection(db, 'orders'), orderBy('createdAt', 'desc'));
-      let querySnapshot;
-      try {
-        querySnapshot = await getDocs(q);
-      } catch (e) {
-        // Fallback to created_at if createdAt index doesn't exist
-        const qFallback = query(collection(db, 'orders'), orderBy('created_at', 'desc'));
-        querySnapshot = await getDocs(qFallback);
+      // Fetch without orderBy to avoid missing-field exclusions or index errors
+      let querySnapshot = await getDocs(collection(db, 'orders'));
+      
+      // Fallback: if 'orders' is empty, maybe the old app used 'pedidos'
+      if (querySnapshot.empty) {
+        try {
+          const fallbackSnapshot = await getDocs(collection(db, 'pedidos'));
+          if (!fallbackSnapshot.empty) {
+            querySnapshot = fallbackSnapshot;
+          }
+        } catch (e) {
+          console.log("Fallback collection 'pedidos' failed or doesn't exist", e);
+        }
       }
       
       const ordersData = querySnapshot.docs.map(doc => {
@@ -62,6 +68,9 @@ export default function AdminPanel({ token, onLogout }: AdminPanelProps) {
         };
       }) as Order[];
       
+      // Sort in memory (newest first)
+      ordersData.sort((a, b) => new Date(b.created_at!).getTime() - new Date(a.created_at!).getTime());
+      
       setOrders(ordersData);
 
       // Fetch reports summary
@@ -87,8 +96,9 @@ export default function AdminPanel({ token, onLogout }: AdminPanelProps) {
       const itemsSummary = Array.from(summaryMap.values());
       
       setReports({ totalRevenue, itemsSummary });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching data:', error);
+      setErrorMsg(error.message || 'Error desconocido al obtener los datos');
     } finally {
       setLoading(false);
     }
@@ -149,6 +159,19 @@ export default function AdminPanel({ token, onLogout }: AdminPanelProps) {
           </button>
         </div>
       </div>
+
+      {errorMsg && (
+        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/50 p-4 rounded-xl flex items-start gap-3">
+          <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 shrink-0 mt-0.5" />
+          <div>
+            <h3 className="text-sm font-medium text-red-800 dark:text-red-300">Error al cargar los pedidos</h3>
+            <p className="text-sm text-red-600 dark:text-red-400 mt-1">{errorMsg}</p>
+            <p className="text-xs text-red-500 dark:text-red-400 mt-2">
+              Verifica que tu cuenta ({auth.currentUser?.email}) tenga permisos en las reglas de Firestore.
+            </p>
+          </div>
+        </div>
+      )}
 
       <div className="flex gap-2 p-1 bg-gray-100 dark:bg-gray-800/50 rounded-xl w-fit transition-colors">
         <button
@@ -298,7 +321,7 @@ export default function AdminPanel({ token, onLogout }: AdminPanelProps) {
                     </td>
                   </tr>
                 ))}
-                {orders.length === 0 && (
+                {orders.length === 0 && !errorMsg && (
                   <tr>
                     <td colSpan={8} className="py-12 text-center text-gray-500 dark:text-gray-400">
                       No hay pedidos registrados.
