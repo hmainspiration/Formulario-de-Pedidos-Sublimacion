@@ -16,12 +16,13 @@ export default function AdminPanel({ token, onLogout }: AdminPanelProps) {
   const [reports, setReports] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [dbInfo, setDbInfo] = useState<string>('');
   const [activeTab, setActiveTab] = useState<'orders' | 'summary' | 'settings'>('orders');
   
   // Settings state
   const [staffPin, setStaffPin] = useState('');
   const [isSavingSettings, setIsSavingSettings] = useState(false);
-  const isOwner = auth.currentUser?.email === 'hmalldm95@gmail.com';
+  const isOwner = auth.currentUser?.email?.toLowerCase() === 'hmalldm95@gmail.com';
 
   // Edit state
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -36,6 +37,11 @@ export default function AdminPanel({ token, onLogout }: AdminPanelProps) {
     setLoading(true);
     setErrorMsg(null);
     try {
+      // Info de diagnóstico
+      const dbId = (db as any)._databaseId?.database || 'default';
+      const projId = (db as any)._databaseId?.projectId || 'unknown';
+      setDbInfo(`Proyecto: ${projId} | DB: ${dbId}`);
+
       // Fetch orders
       let querySnapshot = await getDocs(collection(db, 'orders'));
       
@@ -50,10 +56,10 @@ export default function AdminPanel({ token, onLogout }: AdminPanelProps) {
         }
       }
       
-      const ordersData = querySnapshot.docs
-        .filter(doc => doc.id !== 'settings_access' && !doc.data().isSettings)
-        .map(doc => {
+      const ordersData = querySnapshot.docs.map(doc => {
         const data = doc.data();
+        // Skip settings document if it's in the orders collection
+        if (doc.id === 'settings_access' || data.isSettings) return null;
         
         let createdAt = new Date().toISOString();
         if (data.createdAt?.toDate) {
@@ -89,7 +95,7 @@ export default function AdminPanel({ token, onLogout }: AdminPanelProps) {
           status: data.estado || data.status || 'Pendiente',
           created_at: createdAt
         };
-      }) as Order[];
+      }).filter(order => order !== null) as Order[];
       
       ordersData.sort((a, b) => new Date(b.created_at!).getTime() - new Date(a.created_at!).getTime());
       setOrders(ordersData);
@@ -307,6 +313,7 @@ export default function AdminPanel({ token, onLogout }: AdminPanelProps) {
           <div>
             <h3 className="text-sm font-medium text-red-800 dark:text-red-300">Error al cargar los pedidos</h3>
             <p className="text-sm text-red-600 dark:text-red-400 mt-1">{errorMsg}</p>
+            <p className="text-[10px] text-red-400 dark:text-red-500 mt-2 font-mono">{dbInfo}</p>
           </div>
         </div>
       )}

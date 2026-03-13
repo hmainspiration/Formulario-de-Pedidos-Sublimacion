@@ -36,7 +36,16 @@ export default function Login({ onLogin }: LoginProps) {
     setLoading(true);
     try {
       // 1. Iniciar sesión anónima PRIMERO para tener permisos de lectura
-      const result = await signInAnonymously(auth);
+      let result;
+      try {
+        result = await signInAnonymously(auth);
+      } catch (authError: any) {
+        console.error('Auth Error:', authError);
+        if (authError.code === 'auth/operation-not-allowed') {
+          throw new Error('El inicio de sesión con PIN no está activado en Firebase. Por favor, actívalo en la consola de Firebase (Authentication -> Sign-in method -> Anonymous).');
+        }
+        throw authError;
+      }
       
       // 2. Ahora que estamos autenticados, verificar el PIN en Firestore
       const accessDoc = await getDoc(doc(db, 'orders', 'settings_access'));
