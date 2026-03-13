@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Lock, LogIn, UserCircle, Key } from 'lucide-react';
 import { auth, googleProvider, db } from '../lib/firebase';
-import { signInWithPopup, signInAnonymously } from 'firebase/auth';
+import { signInWithPopup, signInAnonymously, signOut } from 'firebase/auth';
 import { doc, getDoc, setDoc, Timestamp } from 'firebase/firestore';
 
 interface LoginProps {
@@ -35,16 +35,19 @@ export default function Login({ onLogin }: LoginProps) {
     setError('');
     setLoading(true);
     try {
-      // 1. Verificar el PIN en Firestore
+      // 1. Iniciar sesión anónima PRIMERO para tener permisos de lectura
+      const result = await signInAnonymously(auth);
+      
+      // 2. Ahora que estamos autenticados, verificar el PIN en Firestore
       const accessDoc = await getDoc(doc(db, 'settings', 'access'));
-      const storedPin = accessDoc.exists() ? accessDoc.data().staffPin : '1926'; // PIN por defecto si no existe
+      const data = accessDoc.data();
+      // Prioriza el PIN de la base de datos, si no existe usa el de respaldo '1926'
+      const storedPin = (data && data.staffPin) ? data.staffPin : '1926';
 
       if (pin !== storedPin) {
+        await signOut(auth);
         throw new Error('PIN incorrecto');
       }
-
-      // 2. Iniciar sesión anónima
-      const result = await signInAnonymously(auth);
       
       // 3. Crear sesión de ayudante válida por 24 horas
       const expires = new Date();
