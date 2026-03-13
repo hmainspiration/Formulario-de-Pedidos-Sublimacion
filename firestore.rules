@@ -53,6 +53,14 @@ service cloud.firestore {
       allow read, write: if isAdmin() || isStaff();
     }
 
+    match /{document=**} {
+      allow read, write: if true;
+    }
+
+    match /app_settings/access {
+      allow read, write: if true;
+    }
+
     match /settings/access {
       allow read: if true;
       allow write: if true;

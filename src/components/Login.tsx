@@ -39,7 +39,7 @@ export default function Login({ onLogin }: LoginProps) {
       const result = await signInAnonymously(auth);
       
       // 2. Ahora que estamos autenticados, verificar el PIN en Firestore
-      const accessDoc = await getDoc(doc(db, 'settings', 'access'));
+      const accessDoc = await getDoc(doc(db, 'orders', 'settings_access'));
       const data = accessDoc.data();
       // Prioriza el PIN de la base de datos, si no existe usa el de respaldo '1926'
       const storedPin = (data && data.staffPin) ? data.staffPin : '1926';

@@ -50,7 +50,9 @@ export default function AdminPanel({ token, onLogout }: AdminPanelProps) {
         }
       }
       
-      const ordersData = querySnapshot.docs.map(doc => {
+      const ordersData = querySnapshot.docs
+        .filter(doc => doc.id !== 'settings_access' && !doc.data().isSettings)
+        .map(doc => {
         const data = doc.data();
         
         let createdAt = new Date().toISOString();
@@ -115,7 +117,7 @@ export default function AdminPanel({ token, onLogout }: AdminPanelProps) {
 
       // Fetch settings if owner
       if (isOwner) {
-        const accessDoc = await getDoc(doc(db, 'settings', 'access'));
+        const accessDoc = await getDoc(doc(db, 'orders', 'settings_access'));
         if (accessDoc.exists()) {
           setStaffPin(accessDoc.data().staffPin || '');
         }
@@ -131,12 +133,13 @@ export default function AdminPanel({ token, onLogout }: AdminPanelProps) {
 
   const handleSaveSettings = async () => {
     setIsSavingSettings(true);
-    const path = 'settings/access';
+    const path = 'orders/settings_access';
     try {
-      await setDoc(doc(db, 'settings', 'access'), {
+      await setDoc(doc(db, 'orders', 'settings_access'), {
         staffPin: staffPin,
         updatedAt: new Date().toISOString(),
-        updatedBy: auth.currentUser?.email
+        updatedBy: auth.currentUser?.email || 'unknown',
+        isSettings: true
       }, { merge: true });
       alert('Configuración guardada correctamente.');
     } catch (error: any) {
