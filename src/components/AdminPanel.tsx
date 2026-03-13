@@ -55,15 +55,30 @@ export default function AdminPanel({ token, onLogout }: AdminPanelProps) {
           createdAt = new Date(data.fecha).toISOString();
         }
 
+        // Handle items: could be an array (new app) or single fields (old app)
+        let items = data.items || data.cart || data.productos || [];
+        if (items.length === 0 && data.producto_nombre) {
+          // If it's the old single-item format
+          items = [{
+            product_type: data.producto_nombre,
+            quantity: data.cantidad || 1,
+            design: data.diseno_nombre || '',
+            design_code: data.opcion_descripcion || '',
+            size: data.talla || '',
+            unit_price: data.total / (data.cantidad || 1),
+            subtotal: data.total
+          }];
+        }
+
         // Handle different field names from old vs new app
         return {
           id: doc.id,
           ...data,
-          customer_name: data.customerName || data.customer_name || data.cliente || 'Desconocido',
-          church: data.phone || data.telefono || data.church || '',
+          customer_name: data.cliente_nombre || data.customerName || data.customer_name || data.cliente || 'Desconocido',
+          church: data.cliente_telefono || data.phone || data.telefono || data.church || '',
           total_amount: data.total || data.total_amount || 0,
-          items: data.items || data.cart || data.productos || [],
-          status: data.status || data.estado || 'Pendiente',
+          items: items,
+          status: data.estado || data.status || 'Pendiente',
           created_at: createdAt
         };
       }) as Order[];
