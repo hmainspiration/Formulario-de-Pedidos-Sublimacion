@@ -39,13 +39,12 @@ export default function App() {
 
   const handleSaveOrder = async (customerName: string, church: string, items: OrderItem[], totalAmount: number) => {
     try {
+      const firstItem = items[0];
       const orderData = {
+        // Campos de esta App (Nuevos)
         customer_name: customerName,
-        customerName: customerName, // Guardamos ambos para compatibilidad
         church,
-        phone: church, // En la app vieja era teléfono, lo guardamos para compatibilidad
         total_amount: totalAmount,
-        total: totalAmount, // Para compatibilidad
         items: items.map((item: any) => ({
           product_type: item.product_type,
           design: item.design,
@@ -55,8 +54,23 @@ export default function App() {
           unit_price: item.unit_price,
           subtotal: item.subtotal
         })),
-        status: 'Pendiente',
-        estado: 'Pendiente',
+        status: 'pendiente',
+
+        // Campos de la otra App (Compatibilidad)
+        cliente_nombre: customerName,
+        cliente_telefono: church,
+        customerName: customerName,
+        phone: church,
+        total: totalAmount,
+        estado: 'pendiente',
+        
+        // Campos planos para el primer artículo (lo que usa la otra app para mostrar el detalle rápido)
+        producto_nombre: firstItem?.product_type || '',
+        cantidad: firstItem?.quantity || 1,
+        diseno_nombre: firstItem?.design || '',
+        opcion_descripcion: firstItem?.design_code || 'Estándar',
+        talla: firstItem?.size || 'Única',
+        
         created_at: serverTimestamp(),
         createdAt: serverTimestamp()
       };
