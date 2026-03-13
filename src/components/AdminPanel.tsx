@@ -17,6 +17,7 @@ export default function AdminPanel({ token, onLogout }: AdminPanelProps) {
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [dbInfo, setDbInfo] = useState<string>('');
+  const [counts, setCounts] = useState<{orders: number, pedidos: number}>({orders: 0, pedidos: 0});
   const [activeTab, setActiveTab] = useState<'orders' | 'summary' | 'settings'>('orders');
   
   // Settings state
@@ -43,17 +44,17 @@ export default function AdminPanel({ token, onLogout }: AdminPanelProps) {
       setDbInfo(`Proyecto: ${projId} | DB: ${dbId}`);
 
       // Fetch orders
-      let querySnapshot = await getDocs(collection(db, 'orders'));
+      const ordersSnap = await getDocs(collection(db, 'orders'));
+      const pedidosSnap = await getDocs(collection(db, 'pedidos'));
       
-      if (querySnapshot.empty) {
-        try {
-          const fallbackSnapshot = await getDocs(collection(db, 'pedidos'));
-          if (!fallbackSnapshot.empty) {
-            querySnapshot = fallbackSnapshot;
-          }
-        } catch (e) {
-          console.log("Fallback collection 'pedidos' failed", e);
-        }
+      setCounts({
+        orders: ordersSnap.size,
+        pedidos: pedidosSnap.size
+      });
+
+      let querySnapshot = ordersSnap;
+      if (ordersSnap.empty && !pedidosSnap.empty) {
+        querySnapshot = pedidosSnap;
       }
       
       const ordersData = querySnapshot.docs.map(doc => {
@@ -314,6 +315,7 @@ export default function AdminPanel({ token, onLogout }: AdminPanelProps) {
             <h3 className="text-sm font-medium text-red-800 dark:text-red-300">Error al cargar los pedidos</h3>
             <p className="text-sm text-red-600 dark:text-red-400 mt-1">{errorMsg}</p>
             <p className="text-[10px] text-red-400 dark:text-red-500 mt-2 font-mono">{dbInfo}</p>
+            <p className="text-[10px] text-red-400 dark:text-red-500 font-mono">Docs: orders({counts.orders}) | pedidos({counts.pedidos})</p>
           </div>
         </div>
       )}
@@ -396,8 +398,25 @@ export default function AdminPanel({ token, onLogout }: AdminPanelProps) {
 
       {activeTab === 'orders' && (
         <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden transition-colors">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
+          {orders.length === 0 ? (
+            <div className="p-12 text-center">
+              <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-400 mb-4">
+                <Package className="w-8 h-8" />
+              </div>
+              <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-1">No hay pedidos registrados</h3>
+              <p className="text-gray-500 dark:text-gray-400 max-w-xs mx-auto mb-6">
+                Parece que aún no se han realizado pedidos o las colecciones están vacías en esta base de datos.
+              </p>
+              <div className="text-[10px] font-mono text-gray-400 bg-gray-50 dark:bg-gray-900/50 p-3 rounded-lg inline-block text-left">
+                <p>Diagnóstico:</p>
+                <p>• {dbInfo}</p>
+                <p>• Colección 'orders': {counts.orders} documentos</p>
+                <p>• Colección 'pedidos': {counts.pedidos} documentos</p>
+              </div>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-gray-50 dark:bg-gray-800/50 border-b border-gray-100 dark:border-gray-700">
                   <th className="py-4 px-6 font-medium text-gray-500 dark:text-gray-400">ID</th>
@@ -541,6 +560,7 @@ export default function AdminPanel({ token, onLogout }: AdminPanelProps) {
               </tbody>
             </table>
           </div>
+          )}
         </div>
       )}
 
