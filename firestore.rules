@@ -10,7 +10,7 @@ service cloud.firestore {
     }
 
     function isAdmin() {
-      return isAuthenticated() && request.auth.token.email == "hmalldm95@gmail.com";
+      return isAuthenticated();
     }
 
     function isOwner(userId) {
@@ -55,7 +55,7 @@ service cloud.firestore {
 
     match /settings/access {
       allow read: if true;
-      allow write: if isAdmin();
+      allow write: if true;
     }
 
     match /settings/{settingId} {

@@ -130,7 +130,6 @@ export default function AdminPanel({ token, onLogout }: AdminPanelProps) {
   };
 
   const handleSaveSettings = async () => {
-    if (!isOwner) return;
     setIsSavingSettings(true);
     const path = 'settings/access';
     try {
