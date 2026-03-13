@@ -62,6 +62,8 @@ export default function App() {
       };
 
       await addDoc(collection(db, 'orders'), orderData);
+      // También guardamos en 'pedidos' para reciprocidad con la otra app
+      await addDoc(collection(db, 'pedidos'), orderData);
     } catch (error: any) {
       console.error("Full error object:", error);
       throw error;

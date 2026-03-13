@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Order } from '../types';
-import { LogOut, RefreshCw, Download, FileText, BarChart3, Package, Trash2, Loader2, AlertCircle, Edit2, Check, X, ExternalLink, Settings, ShieldCheck, Key } from 'lucide-react';
+import { LogOut, RefreshCw, Download, FileText, BarChart3, Package, Trash2, Loader2, AlertCircle, Edit2, Check, X, ExternalLink, Settings, ShieldCheck, Key, UserCircle } from 'lucide-react';
 import { db, auth } from '../lib/firebase';
 import { collection, getDocs, deleteDoc, doc, updateDoc, getDoc, setDoc } from 'firebase/firestore';
 import { signOut } from 'firebase/auth';
@@ -33,6 +33,9 @@ export default function AdminPanel({ token, onLogout }: AdminPanelProps) {
   // Delete state
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  const loginMethod = auth.currentUser?.isAnonymous ? 'PIN' : (auth.currentUser?.email || 'Desconocido');
+  const isStaff = auth.currentUser?.isAnonymous;
 
   const fetchData = async () => {
     setLoading(true);
@@ -86,6 +89,7 @@ export default function AdminPanel({ token, onLogout }: AdminPanelProps) {
 
         return {
           id: doc.id,
+          collection: doc.ref.parent.id,
           ...data,
           customer_name: data.cliente_nombre || data.customerName || data.customer_name || data.cliente || 'Desconocido',
           church: data.cliente_telefono || data.phone || data.telefono || data.church || '',
@@ -270,7 +274,18 @@ export default function AdminPanel({ token, onLogout }: AdminPanelProps) {
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 transition-colors">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Panel de Administración</h1>
-          <p className="text-gray-500 dark:text-gray-400 mt-1">Gestión de pedidos Centenario 2026</p>
+          <div className="flex items-center gap-2 mt-1">
+            <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400 flex items-center gap-1">
+              {isStaff ? <Key className="w-3 h-3" /> : <UserCircle className="w-3 h-3" />}
+              Sesión: {loginMethod}
+            </span>
+            {isOwner && (
+              <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900/40 text-amber-600 dark:text-amber-400 flex items-center gap-1">
+                <ShieldCheck className="w-3 h-3" />
+                Propietario
+              </span>
+            )}
+          </div>
         </div>
         <div className="flex flex-wrap items-center gap-3">
           <a
@@ -418,6 +433,7 @@ export default function AdminPanel({ token, onLogout }: AdminPanelProps) {
               <thead>
                 <tr className="bg-gray-50 dark:bg-gray-800/50 border-b border-gray-100 dark:border-gray-700">
                   <th className="py-4 px-6 font-medium text-gray-500 dark:text-gray-400">ID</th>
+                  <th className="py-4 px-6 font-medium text-gray-500 dark:text-gray-400">Origen</th>
                   <th className="py-4 px-6 font-medium text-gray-500 dark:text-gray-400">Cliente</th>
                   <th className="py-4 px-6 font-medium text-gray-500 dark:text-gray-400">Iglesia/Tel</th>
                   <th className="py-4 px-6 font-medium text-gray-500 dark:text-gray-400">Artículos</th>
@@ -432,6 +448,15 @@ export default function AdminPanel({ token, onLogout }: AdminPanelProps) {
                   <tr key={order.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
                     <td className="py-4 px-6 text-gray-500 dark:text-gray-400">
                       <span className="text-xs font-mono bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded">{String(order.id).slice(0, 6)}</span>
+                    </td>
+                    <td className="py-4 px-6 text-gray-500 dark:text-gray-400">
+                      <span className={`text-[10px] uppercase font-bold px-1.5 py-0.5 rounded ${
+                        (order as any).collection === 'orders' 
+                          ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' 
+                          : 'bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400'
+                      }`}>
+                        {(order as any).collection}
+                      </span>
                     </td>
                     <td className="py-4 px-6">
                       {editingId === order.id ? (
