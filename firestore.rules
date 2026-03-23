@@ -11,7 +11,7 @@ service cloud.firestore {
 
     function isAdmin() {
       return isAuthenticated() && (
-        request.auth.token.email == "hmalldm95@gmail.com" ||
+        ("email" in request.auth.token && request.auth.token.email == "hmalldm95@gmail.com") ||
         (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin')
       );
@@ -37,7 +37,7 @@ service cloud.firestore {
     match /settings/{id} { allow read: if true; allow write: if isAdmin(); }
 
     // Access settings (PIN)
-    match /settings_access/staff {
+    match /orders/settings_access {
       allow read: if true;
       allow write: if isAdmin();
     }
@@ -50,14 +50,13 @@ service cloud.firestore {
     // Orders
     match /orders/{orderId} {
       allow create: if true;
-      allow read, update: if canManageOrders();
-      allow delete: if isAdmin();
+      allow read: if canManageOrders() || orderId == 'settings_access';
+      allow update, delete: if canManageOrders() && orderId != 'settings_access';
     }
 
     match /pedidos/{pedidoId} {
       allow create: if true;
-      allow read, update: if canManageOrders();
-      allow delete: if isAdmin();
+      allow read, update, delete: if canManageOrders();
     }
 
     // Users
